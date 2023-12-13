@@ -1,0 +1,13 @@
+config:
+  target: http://asciiart.artillery.io:8080
+  processor: './send-nats-message.js'
+  phases:
+    - duration: 10
+      arrivalRate: 1
+      rampTo: 5
+      name: Warm up phase
+scenarios:
+  - flow:
+      - loop:
+          - function: "run"
+        count: 10
