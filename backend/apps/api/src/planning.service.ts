@@ -47,7 +47,6 @@ export class PlanningService {
       updatedKeys.push(existingEntryEndDate);
     }
     this.sortedPlanningKeys = Object.keys(this.planning).sort();
-    console.log(this.planning);
     this.client.emit('planning.updated', updatedKeys);
   }
 
@@ -66,10 +65,10 @@ export class PlanningService {
         if (!this.planning[dateString]) {
           this.planning[dateString] = { date: dateString, entries: [] };
         }
-        const existingEntryIdx = this.planning[dateString].entries.findIndex(
-          (e) => e.id === entry.id,
-        );
-        if (existingEntryIdx !== -1) {
+        const existingEntryIdx = (
+          this.planning[dateString].entries ?? []
+        ).findIndex((e) => e?.id === entry.id);
+        if (existingEntryIdx !== null && existingEntryIdx !== -1) {
           existingEntryEndDate = format(
             this.planning[dateString].entries[existingEntryIdx].end,
             DATE_INDEX_FORMAT,
@@ -80,10 +79,10 @@ export class PlanningService {
         }
         break;
       case 'remove':
-        const entryToDeleteIdx = this.planning[dateString].entries.findIndex(
-          (e) => e.id === entry.id,
-        );
-        if (entryToDeleteIdx !== -1) {
+        const entryToDeleteIdx = (
+          this.planning[dateString].entries ?? []
+        ).findIndex((e) => e?.id === entry.id);
+        if (entryToDeleteIdx !== null && entryToDeleteIdx !== -1) {
           existingEntryEndDate = format(
             this.planning[dateString].entries[entryToDeleteIdx].end,
             DATE_INDEX_FORMAT,

@@ -11,6 +11,10 @@ import {
 import { Server } from 'ws';
 import { v4 as uuidv4 } from 'uuid';
 import { PlanningService } from './planning.service';
+import { addDays, format } from 'date-fns';
+import { PlanningDateDto } from './dto/planning-date.dto';
+
+const DATE_INDEX_FORMAT = 'yyyy-MM-dd';
 
 @WebSocketGateway({
   cors: {
@@ -58,6 +62,9 @@ export class PlanningGateway
         if (index >= 0) {
           userIds.splice(index, 1);
         }
+        if (!!this.userIdsByDate[date] && !this.userIdsByDate[date].length) {
+          delete this.userIdsByDate[date];
+        }
       }
       this.logger.log(
         `User disconnected | disconnectedUserId=${disconnectedUserId}`,
@@ -72,14 +79,13 @@ export class PlanningGateway
     { from, to, userId }: { from: string; to: string; userId: string },
   ): Promise<void> {
     console.log({ from, to, userId });
-    const planning = this.planningService.getPlanning(new Date(from), new Date(to));
-    for (const p of planning) {
-      if (!this.userIdsByDate[p.date]) {
-        this.userIdsByDate[p.date] = [];
-      }
-      this.userIdsByDate[p.date].push(userId);
-    }
-    this.logger.log(`Planning prepared | userId=${userId}`, [planning, this.userIdsByDate]);
+    const fromDate = new Date(from);
+    const toDate = new Date(to);
+    this.syncUserIdsByDate(fromDate, toDate, userId);
+    const planning = this.planningService.getPlanning(fromDate, toDate);
+    this.logger.log(
+      `Planning prepared | userId=${userId} planningSize=${planning.length}`,
+    );
     client.send(
       JSON.stringify({
         event: 'planningReady',
@@ -88,6 +94,34 @@ export class PlanningGateway
         },
       }),
     );
+  }
+
+  private syncUserIdsByDate(from: Date, to: Date, userId: string): void {
+    // Remove userId from all date indexes
+    for (const date in this.userIdsByDate) {
+      const userIds = this.userIdsByDate[date];
+      const index = userIds.indexOf(userId);
+      if (index >= 0) {
+        userIds.splice(index, 1);
+      }
+      if (!!this.userIdsByDate[date] && !this.userIdsByDate[date].length) {
+        delete this.userIdsByDate[date];
+      }
+    }
+
+    let currDate = format(from, DATE_INDEX_FORMAT);
+    let count = 1;
+    const end = format(addDays(to, 1), DATE_INDEX_FORMAT);
+    while (currDate !== end) {
+      if (!this.userIdsByDate[currDate]) {
+        this.userIdsByDate[currDate] = [];
+      }
+      this.userIdsByDate[currDate].push(userId);
+      currDate = format(addDays(from, count), DATE_INDEX_FORMAT);
+      count++;
+    }
+    this.logger.log(`UserIdsByDate synced | userId=${userId}`);
+    console.log(this.userIdsByDate);
   }
 
   updateClients(dates: string[]) {
