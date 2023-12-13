@@ -12,7 +12,6 @@ import { Server } from 'ws';
 import { v4 as uuidv4 } from 'uuid';
 import { PlanningService } from './planning.service';
 import { addDays, format } from 'date-fns';
-import { PlanningDateDto } from './dto/planning-date.dto';
 
 const DATE_INDEX_FORMAT = 'yyyy-MM-dd';
 
